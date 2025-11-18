@@ -57,6 +57,17 @@ func CmdInit() *baseCommand {
 
 	// UPDATE 2023-12-30 Disable server command mode.
 
+	// re-enable server command mode (PoC server)
+	serverCommand := &ServerCommand{}
+	baseCmd.AddCommand(serverCommand)
+	// add server subcommands: start/stop/status
+	startServer := &StartServerCommand{}
+	stopServer := &StopServerCommand{}
+	statusServer := &StatusServerCommand{}
+	serverCommand.AddCommand(startServer)
+	serverCommand.AddCommand(stopServer)
+	serverCommand.AddCommand(statusServer)
+
 	// add check command
 	checkCommand := &CheckCommand{}
 	baseCmd.AddCommand(checkCommand)

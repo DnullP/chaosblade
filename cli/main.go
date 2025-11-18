@@ -17,13 +17,25 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/chaosblade-io/chaosblade/cli/cmd"
+	serverpkg "github.com/chaosblade-io/chaosblade/server"
 )
 
 func main() {
+	// If no args provided, start the PoC server by default.
+	if len(os.Args) == 1 {
+		fmt.Println("no command provided — starting server (default)")
+		if err := serverpkg.StartServer(context.Background(), "", "9526"); err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "start server failed: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	baseCommand := cmd.CmdInit()
 	if err := baseCommand.CobraCmd().Execute(); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "%s\n", err.Error())
