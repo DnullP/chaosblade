@@ -23,6 +23,7 @@ require (
 	github.com/chaosblade-io/chaosblade-exec-os v1.8.0
 	github.com/chaosblade-io/chaosblade-operator v1.8.0
 	github.com/chaosblade-io/chaosblade-spec-go v1.8.0
+	github.com/gin-gonic/gin v0.0.0-00010101000000-000000000000
 	github.com/glebarez/sqlite v1.11.0
 	github.com/olekukonko/tablewriter v0.0.5-0.20201029120751-42e21c7531a3
 	github.com/shirou/gopsutil v3.21.11+incompatible
@@ -34,6 +35,10 @@ require (
 	k8s.io/klog/v2 v2.4.0
 	sigs.k8s.io/controller-runtime v0.6.0
 )
+
+replace github.com/gin-gonic/gin => ./vendor/github.com/gin-gonic/gin
+
+require google.golang.org/grpc v1.39.0
 
 require (
 	github.com/BurntSushi/toml v1.3.2 // indirect
@@ -127,7 +132,6 @@ require (
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	gomodules.xyz/jsonpatch/v2 v2.0.1 // indirect
 	google.golang.org/genproto v0.0.0-20201110150050-8816d57aaa9a // indirect
-	google.golang.org/grpc v1.39.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
