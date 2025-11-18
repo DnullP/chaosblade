@@ -1,0 +1,137 @@
+openapi: 3.0.1
+info:
+  title: ChaosBlade Experiment API
+  version: 1.0.0
+  description: REST interface for creating, destroying and querying experiments.
+servers:
+  - url: http://localhost:9000
+paths:
+  /api/v1/experiments:
+    post:
+      summary: Create a new experiment
+      operationId: createExperiment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExperimentRequest'
+      responses:
+        '201':
+          description: Experiment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    $ref: '#/components/schemas/Response'
+                  record:
+                    $ref: '#/components/schemas/ExperimentRecord'
+        '400':
+          description: Invalid payload
+  /api/v1/experiments/{uid}:
+    get:
+      summary: Query experiment by uid
+      operationId: getExperiment
+      parameters:
+        - name: uid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Experiment info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExperimentRecord'
+        '400':
+          description: Query failed
+    delete:
+      summary: Destroy an experiment
+      operationId: destroyExperiment
+      parameters:
+        - name: uid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DestroyExperimentRequest'
+      responses:
+        '200':
+          description: Destroyed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+components:
+  schemas:
+    CreateExperimentRequest:
+      type: object
+      required: [target, action]
+      properties:
+        uid:
+          type: string
+          description: Custom uid, generated if omitted.
+        scope:
+          type: string
+        target:
+          type: string
+        action:
+          type: string
+        flags:
+          type: object
+          additionalProperties:
+            type: string
+    DestroyExperimentRequest:
+      type: object
+      properties:
+        uid:
+          type: string
+        scope:
+          type: string
+        target:
+          type: string
+        action:
+          type: string
+        flags:
+          type: object
+          additionalProperties:
+            type: string
+    ExperimentRecord:
+      type: object
+      properties:
+        uid:
+          type: string
+        command:
+          type: string
+        subCommand:
+          type: string
+        flag:
+          type: string
+        status:
+          type: string
+        error:
+          type: string
+        createTime:
+          type: string
+        updateTime:
+          type: string
+    Response:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: integer
+        result:
+          description: Response payload
+        err:
+          type: string
