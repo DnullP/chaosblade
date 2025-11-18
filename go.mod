@@ -147,3 +147,10 @@ require (
 )
 
 replace k8s.io/client-go => k8s.io/client-go v0.20.6
+
+// Resolve ambiguous ugorji module which provides the same package path
+require (
+	github.com/ugorji/go/codec v1.2.9
+)
+
+replace github.com/ugorji/go => github.com/ugorji/go/codec v1.2.9
