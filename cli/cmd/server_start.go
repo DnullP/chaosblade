@@ -19,17 +19,18 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"path"
 	"time"
 
 	"github.com/spf13/cobra"
 
+	serverpkg "github.com/chaosblade-io/chaosblade/server"
 	"github.com/chaosblade-io/chaosblade-spec-go/channel"
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 	"github.com/chaosblade-io/chaosblade-spec-go/util"
+	"net/http"
 )
 
 const startServerKey = "blade server start --nohup"
@@ -122,14 +123,12 @@ func (ssc *StartServerCommand) start() error {
 // start0 starts web service
 func (ssc *StartServerCommand) start0() {
 	go func() {
-		err := http.ListenAndServe(ssc.ip+":"+ssc.port, nil)
-		if err != nil {
+		// start Gin-based server (PoC)
+		if err := serverpkg.StartServer(context.Background(), ssc.ip, ssc.port); err != nil {
 			log.Errorf(context.Background(), "start blade server error, %v", err)
-			// log.Error(err, "start blade server error")
 			os.Exit(1)
 		}
 	}()
-	Register("/chaosblade")
 	util.Hold()
 }
 

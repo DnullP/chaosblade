@@ -17,6 +17,7 @@ module github.com/chaosblade-io/chaosblade
 go 1.25
 
 require (
+	github.com/gin-gonic/gin v1.9.0
 	github.com/chaosblade-io/chaosblade-exec-cloud v1.8.0
 	github.com/chaosblade-io/chaosblade-exec-cri v1.8.0
 	github.com/chaosblade-io/chaosblade-exec-middleware v1.8.0
