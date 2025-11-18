@@ -17,29 +17,29 @@
 package os
 
 import (
-    "context"
-    "testing"
+	"context"
+	"testing"
 
-    "github.com/chaosblade-io/chaosblade-spec-go/spec"
+	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 )
 
 func TestExecInProcessCpuStartAndDestroy(t *testing.T) {
-    executorIf := NewExecutor()
-    model := &spec.ExpModel{Target: "os", ActionName: "load", ActionFlags: map[string]string{"cpu-percent": "10"}}
-    uid := "test-uid-1"
-    real, ok := executorIf.(*Executor)
-    if !ok {
-        t.Fatalf("executor type assertion failed")
-    }
-    resp := real.ExecInProcess(uid, context.Background(), model)
-    if !resp.Success {
-        t.Fatalf("expected success start, got err: %v", resp.Err)
-    }
+	executorIf := NewExecutor()
+	model := &spec.ExpModel{Target: "os", ActionName: "load", ActionFlags: map[string]string{"cpu-percent": "10"}}
+	uid := "test-uid-1"
+	real, ok := executorIf.(*Executor)
+	if !ok {
+		t.Fatalf("executor type assertion failed")
+	}
+	resp := real.ExecInProcess(uid, context.Background(), model)
+	if !resp.Success {
+		t.Fatalf("expected success start, got err: %v", resp.Err)
+	}
 
-    // destroy
-    ctx := spec.SetDestroyFlag(context.Background(), uid)
-    resp2 := real.ExecInProcess(uid, ctx, model)
-    if !resp2.Success {
-        t.Fatalf("expected success destroy, got err: %v", resp2.Err)
-    }
+	// destroy
+	ctx := spec.SetDestroyFlag(context.Background(), uid)
+	resp2 := real.ExecInProcess(uid, ctx, model)
+	if !resp2.Success {
+		t.Fatalf("expected success destroy, got err: %v", resp2.Err)
+	}
 }

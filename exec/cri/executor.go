@@ -15,7 +15,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+*/
 
 package cri
 
@@ -89,7 +89,7 @@ func (e *Executor) ExecInProcess(uid string, ctx context.Context, model *spec.Ex
 			return fmt.Errorf("executor not found: %s", key)
 		}
 		// if underlying executor supports ExecInProcess, prefer that
-		type inProc interface{
+		type inProc interface {
 			ExecInProcess(string, context.Context, *spec.ExpModel) *spec.Response
 		}
 		if ip, ok := executor.(inProc); ok {
