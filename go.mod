@@ -21,19 +21,20 @@ require (
 	github.com/chaosblade-io/chaosblade-exec-cri v1.8.0
 	github.com/chaosblade-io/chaosblade-exec-middleware v1.8.0
 	github.com/chaosblade-io/chaosblade-exec-os v1.8.0
-	github.com/chaosblade-io/chaosblade-operator v1.8.0
-	github.com/chaosblade-io/chaosblade-spec-go v1.8.0
-	github.com/gin-gonic/gin v0.0.0-00010101000000-000000000000
-	github.com/glebarez/sqlite v1.11.0
-	github.com/olekukonko/tablewriter v0.0.5-0.20201029120751-42e21c7531a3
-	github.com/shirou/gopsutil v3.21.11+incompatible
-	github.com/spf13/cobra v1.5.0
-	github.com/spf13/pflag v1.0.5
-	golang.org/x/term v0.30.0
-	k8s.io/apimachinery v0.20.6
-	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/klog/v2 v2.4.0
-	sigs.k8s.io/controller-runtime v0.6.0
+        github.com/chaosblade-io/chaosblade-operator v1.8.0
+        github.com/chaosblade-io/chaosblade-spec-go v1.8.0
+        github.com/gin-gonic/gin v0.0.0-00010101000000-000000000000
+        github.com/glebarez/sqlite v1.11.0
+        github.com/olekukonko/tablewriter v0.0.5-0.20201029120751-42e21c7531a3
+        github.com/shirou/gopsutil v3.21.11+incompatible
+        github.com/spf13/cobra v1.5.0
+        github.com/spf13/pflag v1.0.5
+        golang.org/x/term v0.30.0
+        k8s.io/apimachinery v0.20.6
+        k8s.io/client-go v12.0.0+incompatible
+        k8s.io/klog/v2 v2.4.0
+        sigs.k8s.io/controller-runtime v0.6.0
+        gorm.io/gorm v1.25.7
 )
 
 replace github.com/gin-gonic/gin => ./vendor/github.com/gin-gonic/gin
@@ -137,10 +138,9 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gorm.io/gorm v1.25.7 // indirect
-	k8s.io/api v0.20.6 // indirect
-	k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd // indirect
-	k8s.io/utils v0.0.0-20201110183641-67b214c5f920 // indirect
+        k8s.io/api v0.20.6 // indirect
+        k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd // indirect
+        k8s.io/utils v0.0.0-20201110183641-67b214c5f920 // indirect
 	modernc.org/libc v1.22.5 // indirect
 	modernc.org/mathutil v1.5.0 // indirect
 	modernc.org/memory v1.5.0 // indirect
