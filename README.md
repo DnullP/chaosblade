@@ -66,6 +66,9 @@ After entering the container, you can read the README.txt file to implement the 
 ## Compile
 See [BUILD.md](BUILD.md) for the details.
 
+## Service-Based Injection
+The project now supports running as a long-lived service (for example as a Kubernetes DaemonSet) that exposes HTTP and gRPC APIs for creating and destroying experiments without invoking the standalone CLI binary. The service wiring, executors, and request lifecycle are described in [docs/service_injection.md](docs/service_injection.md).
+
 ## Bugs and Feedback
 For bug report, questions and discussions please submit [GitHub Issues](https://github.com/chaosblade-io/chaosblade/issues).
 

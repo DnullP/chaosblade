@@ -30,13 +30,14 @@ require (
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/term v0.30.0
+	gorm.io/gorm v1.25.7
 	k8s.io/apimachinery v0.20.6
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/klog/v2 v2.4.0
 	sigs.k8s.io/controller-runtime v0.6.0
 )
 
-replace github.com/gin-gonic/gin => ./vendor/github.com/gin-gonic/gin
+replace github.com/gin-gonic/gin => ./third_party/github.com/gin-gonic/gin
 
 require google.golang.org/grpc v1.39.0
 
@@ -137,7 +138,6 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gorm.io/gorm v1.25.7 // indirect
 	k8s.io/api v0.20.6 // indirect
 	k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd // indirect
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920 // indirect

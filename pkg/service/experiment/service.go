@@ -11,6 +11,7 @@ import (
 
 	"github.com/chaosblade-io/chaosblade/data"
 	"github.com/chaosblade-io/chaosblade/pkg/service/dispatcher"
+	"github.com/chaosblade-io/chaosblade/pkg/service/status"
 )
 
 // CreateExperimentRequest describes a REST/gRPC payload for creating an experiment.
@@ -30,6 +31,18 @@ type DestroyExperimentRequest struct {
 	Target string            `json:"target"`
 	Action string            `json:"action"`
 	Flags  map[string]string `json:"flags"`
+}
+
+// StatusQuery encapsulates status request parameters for preparations and experiments.
+type StatusQuery struct {
+	Type   string `json:"type"`
+	Target string `json:"target"`
+	Action string `json:"action"`
+	Flag   string `json:"flag"`
+	Limit  string `json:"limit"`
+	Status string `json:"status"`
+	UID    string `json:"uid"`
+	Asc    bool   `json:"asc"`
 }
 
 // Service wraps the dispatcher and data source.
@@ -88,9 +101,9 @@ func (s *Service) Create(ctx context.Context, request CreateExperimentRequest) (
 	}
 
 	if !response.Success {
-		_ = s.ds.UpdateExperimentModelByUid(uid, Error, response.Err)
+		_ = s.ds.UpdateExperimentModelByUid(uid, status.Error, response.Err)
 	} else {
-		_ = s.ds.UpdateExperimentModelByUid(uid, Success, "")
+		_ = s.ds.UpdateExperimentModelByUid(uid, status.Success, "")
 		response.Result = uid
 	}
 	return response, commandModel, nil
@@ -139,9 +152,67 @@ func (s *Service) Destroy(ctx context.Context, request DestroyExperimentRequest)
 		return nil, err
 	}
 	if response.Success {
-		_ = s.ds.UpdateExperimentModelByUid(request.UID, Destroyed, "")
+		_ = s.ds.UpdateExperimentModelByUid(request.UID, status.Destroyed, "")
 	}
 	return response, nil
+}
+
+// Status queries experiment or preparation state, mirroring the CLI semantics.
+func (s *Service) Status(ctx context.Context, request StatusQuery) (*spec.Response, error) {
+	uid := request.UID
+	switch strings.ToLower(request.Type) {
+	case "create", "destroy", "c", "d":
+		if uid != "" {
+			record, err := s.ds.QueryExperimentModelByUid(uid)
+			if err != nil {
+				return nil, spec.ResponseFailWithFlags(spec.DatabaseError, "query", err)
+			}
+			if record == nil {
+				return nil, spec.ResponseFailWithFlags(spec.DataNotFound, uid)
+			}
+			return spec.ReturnSuccess(record), nil
+		}
+		models, err := s.ds.QueryExperimentModels(request.Target, request.Action, request.Flag, request.Status, request.Limit, request.Asc)
+		if err != nil {
+			return nil, spec.ResponseFailWithFlags(spec.DatabaseError, "query", err)
+		}
+		return spec.ReturnSuccess(models), nil
+	case "prepare", "revoke", "p", "r":
+		if uid != "" {
+			record, err := s.ds.QueryPreparationByUid(uid)
+			if err != nil {
+				return nil, spec.ResponseFailWithFlags(spec.DatabaseError, "query", err)
+			}
+			if record == nil {
+				return nil, spec.ResponseFailWithFlags(spec.DataNotFound, uid)
+			}
+			return spec.ReturnSuccess(record), nil
+		}
+		records, err := s.ds.QueryPreparationRecords(request.Target, request.Status, request.Action, request.Flag, request.Limit, request.Asc)
+		if err != nil {
+			return nil, spec.ResponseFailWithFlags(spec.DatabaseError, "query", err)
+		}
+		return spec.ReturnSuccess(records), nil
+	default:
+		if uid == "" {
+			return nil, spec.ResponseFailWithFlags(spec.ParameterLess, "type|uid, must specify the right type or uid")
+		}
+		record, err := s.ds.QueryExperimentModelByUid(uid)
+		if err != nil {
+			return nil, spec.ResponseFailWithFlags(spec.DatabaseError, "query", err)
+		}
+		if !util.IsNil(record) {
+			return spec.ReturnSuccess(record), nil
+		}
+		preparation, err := s.ds.QueryPreparationByUid(uid)
+		if err != nil {
+			return nil, spec.ResponseFailWithFlags(spec.DatabaseError, "query", err)
+		}
+		if util.IsNil(preparation) {
+			return nil, spec.ResponseFailWithFlags(spec.DataNotFound, uid)
+		}
+		return spec.ReturnSuccess(preparation), nil
+	}
 }
 
 // Query returns the stored experiment information.
@@ -170,7 +241,7 @@ func (s *Service) persistExperiment(uid, scope, target, action string, expModel 
 		Command:    targetForRecord(scope, target),
 		SubCommand: subCommandForRecord(scope, target, action),
 		Flag:       flagsInline,
-		Status:     Created,
+		Status:     status.Created,
 		Error:      "",
 		CreateTime: createTime,
 		UpdateTime: createTime,
