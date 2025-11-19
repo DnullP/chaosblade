@@ -18,24 +18,31 @@ package data
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
+	"errors"
+	"strconv"
 	"strings"
 	"time"
+
+	"gorm.io/gorm"
 
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
 )
 
 type PreparationRecord struct {
-	Uid         string
-	ProgramType string
-	Process     string
-	Port        string
-	Pid         string
-	Status      string
-	Error       string
-	CreateTime  string
-	UpdateTime  string
+	ID          uint   `gorm:"primaryKey"`
+	Uid         string `gorm:"column:uid;uniqueIndex:pre_uid_uidx;size:32"`
+	ProgramType string `gorm:"column:program_type;index:pre_type_process_idx,priority:1"`
+	Process     string `gorm:"column:process;index:pre_type_process_idx,priority:2"`
+	Port        string `gorm:"column:port"`
+	Pid         string `gorm:"column:pid"`
+	Status      string `gorm:"column:status;index:pre_status_idx"`
+	Error       string `gorm:"column:error"`
+	CreateTime  string `gorm:"column:create_time"`
+	UpdateTime  string `gorm:"column:update_time"`
+}
+
+func (PreparationRecord) TableName() string {
+	return "preparation"
 }
 
 type PreparationSource interface {
@@ -76,50 +83,23 @@ const UserVersion = 1
 // addPidColumn sql
 const addPidColumn = `ALTER TABLE preparation ADD COLUMN pid VARCHAR DEFAULT ""`
 
-// preparationTableDDL
-const preparationTableDDL = `CREATE TABLE IF NOT EXISTS preparation (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	uid VARCHAR(32) UNIQUE,
-	program_type       VARCHAR NOT NULL,
-	process    VARCHAR,
-	port       VARCHAR,
-	status     VARCHAR,
-    error 	   VARCHAR,
-	create_time VARCHAR,
-	update_time VARCHAR,
-	pid 	   VARCHAR
-)`
-
-var preIndexDDL = []string{
-	`CREATE INDEX pre_uid_uidx ON preparation (uid)`,
-	`CREATE INDEX pre_status_idx ON preparation (status)`,
-	`CREATE INDEX pre_type_process_idx ON preparation (program_type, process)`,
-}
-
-var insertPreDML = `INSERT INTO
-	preparation (uid, program_type, process, port, status, error, create_time, update_time, pid)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-`
-
 func (s *Source) CheckAndInitPreTable() {
 	// check user_version
 	version, err := s.GetUserVersion()
 	ctx := context.Background()
 	if err != nil {
 		log.Fatalf(ctx, "%s", err.Error())
-		// log.Error(err, "GetUserVersion err")
-		// os.Exit(1)
 	}
 	// return directly if equal the current UserVersion
 	if version == UserVersion {
+		// still ensure indexes/columns match the struct definition
+		_ = s.InitPreparationTable()
 		return
 	}
 	// check the table exists or not
 	exists, err := s.PreparationTableExists()
 	if err != nil {
 		log.Fatalf(ctx, "%s", err.Error())
-		// log.Error(err, "PreparationTableExists err")
-		// os.Exit(1)
 	}
 	if exists {
 		// check if pid column exists before adding it
@@ -132,8 +112,6 @@ func (s *Source) CheckAndInitPreTable() {
 			err := s.AlterPreparationTable(addPidColumn)
 			if err != nil {
 				log.Fatalf(ctx, "%s", err.Error())
-				// log.Error(err, "AlterPreparationTable err", "addPidColumn", addPidColumn)
-				// os.Exit(1)
 			}
 		}
 	} else {
@@ -141,259 +119,130 @@ func (s *Source) CheckAndInitPreTable() {
 		err = s.InitPreparationTable()
 		if err != nil {
 			log.Fatalf(ctx, "%s", err.Error())
-			// log.Error(err, "InitPreparationTable err")
-			// os.Exit(1)
 		}
 	}
 	// update userVersion to new
 	err = s.UpdateUserVersion(UserVersion)
 	if err != nil {
 		log.Fatalf(ctx, "%s", err.Error())
-		// log.Error(err, "UpdateUserVersion err", "UserVersion", UserVersion)
-		// os.Exit(1)
 	}
 }
 
 func (s *Source) InitPreparationTable() error {
-	_, err := s.DB.Exec(preparationTableDDL)
-	if err != nil {
-		return fmt.Errorf("create preparation table err, %s", err)
-	}
-	for _, sql := range preIndexDDL {
-		s.DB.Exec(sql)
-	}
-	return nil
+	return s.DB.AutoMigrate(&PreparationRecord{})
 }
 
 func (s *Source) AlterPreparationTable(alterSql string) error {
-	_, err := s.DB.Exec(alterSql)
-	if err != nil {
-		return fmt.Errorf("execute %s sql err, %s", alterSql, err)
-	}
-	return nil
+	return s.DB.Exec(alterSql).Error
 }
 
 func (s *Source) PreparationTableExists() (bool, error) {
-	stmt, err := s.DB.Prepare(tableExistsDQL)
-	if err != nil {
-		return false, fmt.Errorf("select preparation table exists err when invoke db prepare, %s", err)
-	}
-	defer stmt.Close()
-	rows, err := stmt.Query("preparation")
-	if err != nil {
-		return false, fmt.Errorf("select preparation table exists or not err, %s", err)
-	}
-	defer rows.Close()
-	var c int
-	if rows.Next() {
-		rows.Scan(&c)
-	}
-
-	return c != 0, nil
+	return s.DB.Migrator().HasTable(&PreparationRecord{}), nil
 }
 
 func (s *Source) InsertPreparationRecord(record *PreparationRecord) error {
-	stmt, err := s.DB.Prepare(insertPreDML)
-	if err != nil {
-		return err
+	now := time.Now().Format(time.RFC3339Nano)
+	if record.CreateTime == "" {
+		record.CreateTime = now
 	}
-	defer stmt.Close()
-	_, err = stmt.Exec(
-		record.Uid,
-		record.ProgramType,
-		record.Process,
-		record.Port,
-		record.Status,
-		record.Error,
-		record.CreateTime,
-		record.UpdateTime,
-		record.Pid,
-	)
-	if err != nil {
-		return err
+	if record.UpdateTime == "" {
+		record.UpdateTime = record.CreateTime
 	}
-	return nil
+	return s.DB.Create(record).Error
 }
 
 func (s *Source) QueryPreparationByUid(uid string) (*PreparationRecord, error) {
-	stmt, err := s.DB.Prepare(`SELECT * FROM preparation WHERE uid = ?`)
+	var record PreparationRecord
+	err := s.DB.Where("uid = ?", uid).First(&record).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
-	defer stmt.Close()
-	rows, err := stmt.Query(uid)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	records, err := getPreparationRecordFrom(rows)
-	if err != nil {
-		return nil, err
-	}
-	if len(records) == 0 {
-		return nil, nil
-	}
-	return records[0], nil
+	return &record, nil
 }
 
 // QueryRunningPreByTypeAndProcess returns the first record matching the process id or process name
 func (s *Source) QueryRunningPreByTypeAndProcess(programType string, processName, processId string) (*PreparationRecord, error) {
-	query := `SELECT * FROM preparation WHERE program_type = ? and status = "Running"`
-	if processId != "" && processName != "" {
-		query = fmt.Sprintf(`%s and pid = ? and process = ?`, query)
-	} else if processId != "" {
-		query = fmt.Sprintf(`%s and pid = ?`, query)
-	} else if processName != "" {
-		query = fmt.Sprintf(`%s and process = ?`, query)
+	db := s.DB.Where("program_type = ? AND status = ?", programType, "Running")
+	if processId != "" {
+		db = db.Where("pid = ?", processId)
 	}
-	stmt, err := s.DB.Prepare(query)
+	if processName != "" {
+		db = db.Where("process = ?", processName)
+	}
+	var record PreparationRecord
+	err := db.First(&record).Error
 	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-	var rows *sql.Rows
-	if processId != "" && processName != "" {
-		rows, err = stmt.Query(programType, processId, processName)
-	} else if processId != "" {
-		rows, err = stmt.Query(programType, processId)
-	} else if processName != "" {
-		rows, err = stmt.Query(programType, processName)
-	} else {
-		rows, err = stmt.Query(programType)
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	records, err := getPreparationRecordFrom(rows)
-	if err != nil {
-		return nil, err
-	}
-	if len(records) == 0 {
-		return nil, nil
-	}
-	return records[0], nil
-}
-
-func getPreparationRecordFrom(rows *sql.Rows) ([]*PreparationRecord, error) {
-	records := make([]*PreparationRecord, 0)
-	for rows.Next() {
-		var id int
-		var uid, t, p, port, status, error, createTime, updateTime, pid string
-		err := rows.Scan(&id, &uid, &t, &p, &port, &status, &error, &createTime, &updateTime, &pid)
-		if err != nil {
-			return nil, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
 		}
-		record := &PreparationRecord{
-			Uid:         uid,
-			ProgramType: t,
-			Process:     p,
-			Port:        port,
-			Pid:         pid,
-			Status:      status,
-			Error:       error,
-			CreateTime:  createTime,
-			UpdateTime:  updateTime,
-		}
-		records = append(records, record)
+		return nil, err
 	}
-	return records, nil
+	return &record, nil
 }
 
 func (s *Source) UpdatePreparationRecordByUid(uid, status, errMsg string) error {
-	stmt, err := s.DB.Prepare(`UPDATE preparation
-	SET status = ?, error = ?, update_time = ?
-	WHERE uid = ?
-`)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	_, err = stmt.Exec(status, errMsg, time.Now().Format(time.RFC3339Nano), uid)
-	if err != nil {
-		return err
-	}
-	return nil
+	return s.DB.Model(&PreparationRecord{}).
+		Where("uid = ?", uid).
+		Updates(map[string]interface{}{
+			"status":      status,
+			"error":       errMsg,
+			"update_time": time.Now().Format(time.RFC3339Nano),
+		}).Error
 }
 
 func (s *Source) UpdatePreparationPortByUid(uid, port string) error {
-	stmt, err := s.DB.Prepare(`UPDATE preparation
-	SET port = ?, update_time = ?
-	WHERE uid = ?
-`)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	_, err = stmt.Exec(port, time.Now().Format(time.RFC3339Nano), uid)
-	if err != nil {
-		return err
-	}
-	return nil
+	return s.DB.Model(&PreparationRecord{}).
+		Where("uid = ?", uid).
+		Updates(map[string]interface{}{
+			"port":        port,
+			"update_time": time.Now().Format(time.RFC3339Nano),
+		}).Error
 }
 
 func (s *Source) UpdatePreparationPidByUid(uid, pid string) error {
-	stmt, err := s.DB.Prepare(`UPDATE preparation
-	SET pid = ?, update_time = ?
-	WHERE uid = ?
-`)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	_, err = stmt.Exec(pid, time.Now().Format(time.RFC3339Nano), uid)
-	if err != nil {
-		return err
-	}
-	return nil
+	return s.DB.Model(&PreparationRecord{}).
+		Where("uid = ?", uid).
+		Updates(map[string]interface{}{
+			"pid":         pid,
+			"update_time": time.Now().Format(time.RFC3339Nano),
+		}).Error
 }
 
 func (s *Source) QueryPreparationRecords(target, status, action, flag, limit string, asc bool) ([]*PreparationRecord, error) {
-	sql := `SELECT * FROM preparation where 1=1`
-	parameters := make([]interface{}, 0)
+	db := s.DB.Model(&PreparationRecord{})
 	if target != "" {
-		sql = fmt.Sprintf(`%s and program_type = ?`, sql)
-		parameters = append(parameters, target)
+		db = db.Where("program_type = ?", target)
 	}
 	if status != "" {
-		sql = fmt.Sprintf(`%s and status = ?`, sql)
-		parameters = append(parameters, UpperFirst(status))
-	}
-	if action != "" {
-		sql = fmt.Sprintf(`%s and sub_command = ?`, sql)
-		parameters = append(parameters, action)
-	}
-	if flag != "" {
-		sql = fmt.Sprintf(`%s and flag like ?`, sql)
-		parameters = append(parameters, "%"+flag+"%")
+		db = db.Where("status = ?", UpperFirst(status))
 	}
 	if asc {
-		sql = fmt.Sprintf(`%s order by id asc`, sql)
+		db = db.Order("id asc")
 	} else {
-		sql = fmt.Sprintf(`%s order by id desc`, sql)
+		db = db.Order("id desc")
 	}
 	if limit != "" {
 		values := strings.Split(limit, ",")
-		offset := "0"
-		count := "0"
-		if len(values) > 1 {
-			offset = values[0]
-			count = values[1]
-		} else {
-			count = values[0]
+		switch len(values) {
+		case 1:
+			if count, err := strconv.Atoi(values[0]); err == nil {
+				db = db.Limit(count)
+			}
+		default:
+			if offset, err := strconv.Atoi(values[0]); err == nil {
+				db = db.Offset(offset)
+			}
+			if count, err := strconv.Atoi(values[1]); err == nil {
+				db = db.Limit(count)
+			}
 		}
-		sql = fmt.Sprintf(`%s limit ?,?`, sql)
-		parameters = append(parameters, offset, count)
 	}
-	stmt, err := s.DB.Prepare(sql)
-	if err != nil {
+	var records []*PreparationRecord
+	if err := db.Find(&records).Error; err != nil {
 		return nil, err
 	}
-	defer stmt.Close()
-	rows, err := stmt.Query(parameters...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	return getPreparationRecordFrom(rows)
+	return records, nil
 }
