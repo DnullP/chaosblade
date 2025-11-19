@@ -12,6 +12,7 @@ import (
 	bladeserver "github.com/chaosblade-io/chaosblade/pkg/server/http"
 	"github.com/chaosblade-io/chaosblade/pkg/service/dispatcher"
 	"github.com/chaosblade-io/chaosblade/pkg/service/experiment"
+	"github.com/chaosblade-io/chaosblade/pkg/service/preparation"
 )
 
 func main() {
@@ -29,7 +30,8 @@ func main() {
 	}
 
 	expService := experiment.New(disp, ds)
-	ginServer := bladeserver.NewServer(expService, *authToken)
+	prepService := preparation.New(ds)
+	ginServer := bladeserver.NewServer(expService, prepService, *authToken)
 
 	go func() {
 		if err := grpcapi.ListenAndServe(*grpcAddr, expService); err != nil {

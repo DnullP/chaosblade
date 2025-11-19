@@ -37,7 +37,7 @@ require (
         gorm.io/gorm v1.25.7
 )
 
-replace github.com/gin-gonic/gin => ./vendor/github.com/gin-gonic/gin
+replace github.com/gin-gonic/gin => ./third_party/github.com/gin-gonic/gin
 
 require google.golang.org/grpc v1.39.0
 
